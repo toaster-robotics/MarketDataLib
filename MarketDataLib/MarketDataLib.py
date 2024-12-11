@@ -23,7 +23,6 @@ def fetch_url(url: str, params: Optional[dict] = None, headers: Optional[dict] =
 
 
 def get_stock_historical(symbol: str, start_date: str, end_date: str, resolution: Union[str, int] = 'D') -> pd.DataFrame:
-    print(API_KEY)
     endpoint = '/v1/stocks/candles/%s/%s/' % (resolution, symbol.upper())
     params = {
         'from': start_date,
