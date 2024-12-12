@@ -3,7 +3,6 @@ import pandas as pd
 from concurrent.futures import ThreadPoolExecutor
 import time
 from typing import Optional, List, Tuple, Union
-import random
 
 BASE_URL = 'https://api.marketdata.app'
 API_KEY = ''
@@ -22,7 +21,23 @@ def fetch_url(url: str, params: Optional[dict] = None, headers: Optional[dict] =
                 time.sleep(sleep)
 
 
+def separate_symbols(symbols: List[str]) -> Tuple[List[str], List[str]]:
+    s = pd.Series(symbols)
+    is_option = s.str.len() > 13
+    symbols_stock = s[~is_option].tolist()
+    symbols_option = s[is_option].tolist()
+    return symbols_stock, symbols_option
+
+
 def get_stock_historical(symbol: str, start_date: str, end_date: str, resolution: Union[str, int] = 'D') -> pd.DataFrame:
+    '''
+    Minutely Resolutions: (minutely, 1, 3, 5, 15, 30, 45, ...)
+    Hourly Resolutions: (hourly, H, 1H, 2H, ...)
+    Daily Resolutions: (daily, D, 1D, 2D, ...)
+    Weekly Resolutions: (weekly, W, 1W, 2W, ...)
+    Monthly Resolutions: (monthly, M, 1M, 2M, ...)
+    Yearly Resolutions:(yearly, Y, 1Y, 2Y, ...)
+    '''
     endpoint = '/v1/stocks/candles/%s/%s/' % (resolution, symbol.upper())
     params = {
         'from': start_date,
@@ -178,3 +193,65 @@ def get_option_quotes(symbols: str, cached: bool = True) -> pd.DataFrame:
             lambda symbol: get_option_quote(symbol, cached), symbols))
     df = pd.concat(results, ignore_index=True)
     return df
+
+
+def get_quotes(symbols: List[str], cached: bool = True) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    '''
+    get latest quotes for stock and option symbols
+    input: 
+        symbols: mix of stock and option symbols
+        cached: use cached or live data (live uses more API credits)
+    output: df_mix, df_stocks, df_options
+    '''
+
+    symbols_stock, symbols_option = separate_symbols(symbols)
+
+    df_stocks = get_stock_quotes(
+        symbols=symbols_stock,
+        cached=cached
+    )
+    df_options = get_option_quotes(
+        symbols=symbols_option,
+        cached=cached
+    )
+
+    df = pd.concat([df_stocks, df_options])
+    df = df[['date', 'symbol', 'bid', 'bid_size', 'mid', 'ask', 'ask_size',
+             'last', 'volume',]].sort_values(by=['date', 'symbol']).reset_index(drop=True)
+    return df, df_stocks, df_options
+
+
+def get_historicals(symbols: List[str], start_date: str, end_date: str) -> pd.DataFrame:
+    '''
+    get daily historical data for stock and option symbols
+    options have no intra-day data --> open, high, low are set to close
+    input: 
+        symbols: mix of stock and option symbols
+        start_date: YYYY-MM-DD format
+        end_date: YYYY-MM-DD format
+    output: df_mix, df_stocks, df_options
+    '''
+
+    symbols_stock, symbols_option = separate_symbols(symbols)
+
+    df_stocks = get_stock_historicals(
+        symbols_stock,
+        start_date=start_date,
+        end_date=end_date,
+    )
+    df_options = get_option_historicals(
+        symbols_option,
+        start_date=start_date,
+        end_date=end_date,
+    )
+
+    df_options = df_options.rename(columns={'last': 'close'})
+    df_options['open'] = df_options['close']
+    df_options['high'] = df_options['close']
+    df_options['low'] = df_options['close']
+
+    df = pd.concat([df_stocks, df_options])
+    df = df[['date', 'symbol', 'open', 'high', 'low', 'close', 'volume',]
+            ].sort_values(by=['symbol', 'date']).reset_index(drop=True)
+
+    return df, df_stocks, df_options
