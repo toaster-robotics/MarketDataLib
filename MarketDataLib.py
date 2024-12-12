@@ -221,7 +221,7 @@ def get_quotes(symbols: List[str], cached: bool = True) -> Tuple[pd.DataFrame, p
     return df, df_stocks, df_options
 
 
-def get_historicals(symbols: List[str], start_date: str, end_date: str) -> pd.DataFrame:
+def get_historicals(symbols: List[str], start_date: str, end_date: str) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     '''
     get daily historical data for stock and option symbols
     options have no intra-day data --> open, high, low are set to close
