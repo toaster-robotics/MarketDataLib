@@ -69,10 +69,11 @@ def get_stock_historical(symbol: str, start_date: str, end_date: str, resolution
         return pd.DataFrame()
 
 
-def get_stock_quote(symbol: str, cached: bool = True) -> pd.DataFrame:
+def get_stock_quote(symbol: str, cached: bool = True, extended_hours: bool = False) -> pd.DataFrame:
     endpoint = '/v1/stocks/quotes/%s' % symbol.upper()
     params = {
-        'feed': 'cached' if cached else 'live'
+        'feed': 'cached' if cached else 'live',
+        'extended': extended_hours,
     }
     headers = {
         'Authorization': 'Bearer %s' % API_KEY,
@@ -107,19 +108,19 @@ def get_stock_historicals(symbols: List[str], start_date: str, end_date: str, re
     return df
 
 
-def get_stock_quotes(symbols: List[str], cached: bool = True) -> pd.DataFrame:
+def get_stock_quotes(symbols: List[str], cached: bool = True, extended_hours: bool = False) -> pd.DataFrame:
     with ThreadPoolExecutor() as executor:
         results = list(executor.map(
-            lambda symbol: get_stock_quote(symbol, cached), symbols))
+            lambda symbol: get_stock_quote(symbol, cached, extended_hours), symbols))
     df = pd.concat(results, ignore_index=True)
     return df
 
 
-def get_option_historical(symbol: str, start_date: str, end_date: str) -> pd.DataFrame:
+def get_option_historical(symbol: str, start_date: Optional[str], end_date: Optional[str]) -> pd.DataFrame:
     endpoint = '/v1/options/quotes/%s/' % symbol.upper()
     params = {
-        'from': start_date,
-        'to': end_date,
+        # 'from': start_date,
+        # 'to': end_date,
     }
     headers = {
         'Authorization': 'Bearer %s' % API_KEY,
@@ -195,7 +196,7 @@ def get_option_quotes(symbols: str, cached: bool = True) -> pd.DataFrame:
     return df
 
 
-def get_quotes(symbols: List[str], cached: bool = True) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def get_quotes(symbols: List[str], cached: bool = True, extended_hours: bool = False) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     '''
     get latest quotes for stock and option symbols
     input: 
@@ -208,11 +209,12 @@ def get_quotes(symbols: List[str], cached: bool = True) -> Tuple[pd.DataFrame, p
 
     df_stocks = get_stock_quotes(
         symbols=symbols_stock,
-        cached=cached
+        cached=cached,
+        extended_hours=extended_hours,
     )
     df_options = get_option_quotes(
         symbols=symbols_option,
-        cached=cached
+        cached=cached,
     )
 
     df = pd.concat([df_stocks, df_options])
