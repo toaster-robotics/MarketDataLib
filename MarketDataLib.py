@@ -160,9 +160,6 @@ def get_option_quote(symbol: str, cached: bool = True) -> pd.DataFrame:
     if response is None:
         print('no data found')
         return pd.DataFrame()
-    if response is None:
-        print('no data found')
-        return pd.DataFrame()
     if response.status_code in [200, 203]:
         data = response.json()
         df = pd.DataFrame(data)
@@ -257,3 +254,35 @@ def get_historicals(symbols: List[str], start_date: str, end_date: str) -> Tuple
             ].sort_values(by=['symbol', 'date']).reset_index(drop=True)
 
     return df, df_stocks, df_options
+
+
+def get_chains(symbol: str, date: str, expiration: str) -> pd.DataFrame:
+    endpoint = '/v1/options/chain/%s/' % symbol.upper()
+    columns = ['symbol', 'date', 'underlying', 'expiration', 'side', 'strike', 'first_traded', 'dte', 'updated', 'bid', 'bid_size',
+               'mid', 'ask', 'ask_size', 'last', 'open_interest', 'volume', 'intrinsic_value', 'extrinsic_value', 'underlying_price']
+
+    params = {
+        'date': date,
+        'expiration': expiration,
+    }
+    headers = {
+        'Authorization': 'Bearer %s' % API_KEY,
+        'Accept': 'application/json'
+    }
+    response = fetch_url(BASE_URL + endpoint, params, headers)
+
+    if response is None:
+        print('no data found')
+        return pd.DataFrame()
+    if response.status_code in [200, 203]:
+        data = response.json()
+        df = pd.DataFrame(data)
+        df = df.rename(columns={'optionSymbol': 'symbol', 'bidSize': 'bid_size', 'askSize': 'ask_size', 'openInterest': 'open_interest',
+                                'extrinsicValue': 'extrinsic_value', 'underlyingPrice': 'underlying_price', 'firstTraded': 'first_traded', 'intrinsicValue': 'intrinsic_value'})
+        df['date'] = date
+        df = df[columns]
+        df['expiration'] = pd.to_datetime(df['expiration'], unit='s')
+        df['date'] = pd.to_datetime(df['date'])
+        return df
+
+    return pd.DataFrame(columns=columns)
