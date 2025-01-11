@@ -103,3 +103,13 @@ symbols = ['TSLA250117C00360000', 'PLTR250117C00050000', 'MSTR241220C00190000']
 df = mdl.get_option_quotes(symbols)
 print(df)
 ```
+
+### Downloading Option Chain Data
+```python
+symbol = 'TSLA'
+date='2024-11-15',
+expiration='2024-12-20'
+df = mdl.get_chains(symbol, date, expiration)
+print(df)
+```
+
