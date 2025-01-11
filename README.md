@@ -107,7 +107,7 @@ print(df)
 ### Downloading Option Chain Data
 ```python
 symbol = 'TSLA'
-date='2024-11-15',
+date='2024-11-15'
 expiration='2024-12-20'
 df = mdl.get_chains(symbol, date, expiration)
 print(df)
